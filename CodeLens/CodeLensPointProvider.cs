@@ -16,7 +16,7 @@ namespace SyncToAsync.CodeLens
 {
     [Export(typeof(IAsyncCodeLensDataPointProvider))]
     [Name(Id)]
-    [ContentType("code")]
+    [ContentType("CSharp")]
     [LocalizedName(typeof(Resources), "Sync2AsyncCodeLensProvider")]
     [Priority(300)]
     public class CodeLensPointProvider : IAsyncCodeLensDataPointProvider

@@ -7,11 +7,20 @@
   <Include href="VSGlobals.vsct"/>
 
   <Commands package="Extension">
+    <Buttons>
+      <Button guid="Extension" id="GotoSiblingCommandId" priority="0x0000" type="Button">
+        <Strings>
+          <LocCanonicalName>SyncToAsync.GotoSibling</LocCanonicalName>
+          <ButtonText>GotoSibling</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
   </Commands>
 
   <Symbols>
     <GuidSymbol name="Extension" value="{26c17eb2-8732-4870-9401-30fbc398f6d5}">
-      
+      <IDSymbol name="GotoSiblingCommandId" value="0x0100" />
     </GuidSymbol>
+
   </Symbols>
 </CommandTable>

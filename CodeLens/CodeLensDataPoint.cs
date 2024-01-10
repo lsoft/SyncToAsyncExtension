@@ -15,6 +15,13 @@ namespace SyncToAsync.CodeLens
 {
     public class CodeLensDataPoint : IAsyncCodeLensDataPoint, IDisposable
     {
+        public static readonly CodeLensDetailEntryCommand Command = new CodeLensDetailEntryCommand
+        {
+            CommandId = 0x0100,
+            CommandSet = new Guid("26c17eb2-8732-4870-9401-30fbc398f6d5")
+        };
+
+
         private readonly ICodeLensCallbackService _callbackService;
         private readonly CodeLensDescriptor _descriptor;
         
@@ -22,6 +29,14 @@ namespace SyncToAsync.CodeLens
         private readonly ManualResetEventSlim _dataHasLoaded = new ManualResetEventSlim(initialState: false);
         
         private SiblingInformationContainer? _siblingInfo;
+
+        public event AsyncEventHandler? InvalidatedAsync;
+        public CodeLensDescriptor Descriptor => this._descriptor;
+
+        public Guid UniqueIdentifier
+        {
+            get;
+        } = Guid.NewGuid();
 
         public CodeLensDataPoint(
             ICodeLensCallbackService callbackService,
@@ -41,15 +56,6 @@ namespace SyncToAsync.CodeLens
             _callbackService = callbackService;
             _descriptor = descriptor;
         }
-
-        public event AsyncEventHandler? InvalidatedAsync;
-
-        public CodeLensDescriptor Descriptor => this._descriptor;
-
-        public Guid UniqueIdentifier
-        {
-            get;
-        } = Guid.NewGuid();
 
         #region network related code
 
@@ -177,6 +183,12 @@ namespace SyncToAsync.CodeLens
                             : new List<object>(),
                     PaneNavigationCommands = new List<CodeLensDetailPaneCommand>()
                     {
+                         new CodeLensDetailPaneCommand
+                         {
+                             CommandDisplayName = "Go to sibling method...",
+                             CommandId = Command,
+                             CommandArgs = new object[] { _siblingInfo! }
+                         }
                     },
                 };
 

@@ -40,38 +40,5 @@ namespace SyncToAsync.Extension
 
             MethodBody = sic.Sibling.MethodBody;
         }
-
-        public async Task GotoSiblingAsync()
-        {
-            if (_sic is null || _sic.Disabled || _sic.Sibling is null)
-            {
-                return;
-            }
-
-            var projectId = ProjectId.CreateFromSerialized(_sic.Sibling.ProjectGuid, null);
-            var documentId = DocumentId.CreateFromSerialized(
-                projectId,
-                _sic.Sibling.DocumentGuid
-                );
-
-            var opener = new VisualStudioDocumentHelper(
-                _sic.Sibling.FilePath
-                );
-            if (_sic.Sibling.IsSourceGeneratedDocument)
-            {
-                await opener.OpenNavigateViewRoslynInternalsAsync(
-                    documentId,
-                    _sic.Sibling.MethodSpanStart.Value,
-                    _sic.Sibling.MethodSpanLength.Value
-                    );
-            }
-            else
-            {
-                opener.OpenNavigate(
-                    _sic.Sibling.MethodSpanStart.Value,
-                    _sic.Sibling.MethodSpanLength.Value
-                    );
-            }
-        }
     }
 }

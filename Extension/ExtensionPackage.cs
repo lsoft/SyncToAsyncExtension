@@ -10,6 +10,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.TextManager.Interop;
 using SyncToAsync.Extension.CodeLens;
 using SyncToAsync.Shared;
+using System.ComponentModel.Design;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,6 +33,8 @@ namespace SyncToAsync.Extension
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+
+            await GotoSiblingCommand.InitializeAsync(this);
 
             _refresher = new DelayedCodeLensRefresher();
 

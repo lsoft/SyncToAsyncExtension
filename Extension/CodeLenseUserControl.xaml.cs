@@ -26,26 +26,5 @@ namespace SyncToAsync.Extension
             InitializeComponent();
         }
 
-        private async void Goto_OnMouseLeftButtonUp(
-            object sender,
-            MouseButtonEventArgs e
-            )
-        {
-            try
-            {
-                var viewModel = (sender as FrameworkElement)?.Tag as CodeLenseUserControlViewModel;
-                if (viewModel is null)
-                {
-                    return;
-                }
-
-                await viewModel.GotoSiblingAsync();
-            }
-            catch
-            {
-                //nothing to do
-            }
-        }
-
     }
 }

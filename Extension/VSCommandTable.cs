@@ -20,6 +20,6 @@ namespace SyncToAsync.Extension
     /// </summary>
     internal sealed partial class PackageIds
     {
-
+        public const int GotoSiblingCommandId = 0x0100;
     }
 }

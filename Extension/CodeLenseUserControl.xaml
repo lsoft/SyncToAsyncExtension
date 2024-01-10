@@ -10,27 +10,10 @@
              ui:VsTheme.UseVsTheme="True"
              >
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
-        </Grid.RowDefinitions>
 
         <TextBlock
-            Grid.Row="0"
             Text="{Binding MethodBody}"
             />
-
-        <TextBlock
-            Grid.Row="1"
-            Text="Go to method..."
-            TextDecorations="Underline"
-            HorizontalAlignment="Right"
-            Cursor="Hand"
-            Foreground="LightBlue"
-            Margin="0,0,2,0"
-            MouseLeftButtonUp="Goto_OnMouseLeftButtonUp"
-            Tag="{Binding}"
-        />
 
     </Grid>
 </UserControl>

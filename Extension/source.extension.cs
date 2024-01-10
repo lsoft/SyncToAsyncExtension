@@ -11,7 +11,7 @@ namespace SyncToAsync.Extension
         public const string Name = "SyncToAsync.Extension";
         public const string Description = @"A Visual Studio extension that creates a custom codelense to move from async method to its sync sibling method and vice versa.";
         public const string Language = "en-US";
-        public const string Version = "1.1";
+        public const string Version = "1.2";
         public const string Author = "lsoft";
         public const string Tags = "";
     }
