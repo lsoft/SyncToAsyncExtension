@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -14,10 +13,6 @@ using Microsoft.VisualStudio.LanguageServices;
 using System.Linq;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System.Collections.Immutable;
-using Microsoft.VisualStudio.Language.Intellisense;
-using System.Reflection.Metadata;
-using System.IO;
 using SyncToAsync.Extension.Helper;
 
 namespace SyncToAsync.Extension
@@ -379,33 +374,47 @@ namespace SyncToAsync.Extension
         private bool CheckAsyncMethodParameters(
             Compilation compilation,
             IMethodSymbol methodSymbol,
-            ImmutableArray<IParameterSymbol> correctParameters
+            IReadOnlyList<ITypeSymbol> correctParameters
             )
         {
             var methodParameters = methodSymbol.Parameters;
+
+            var tct = compilation.CancellationToken();
 
             var correctParametersIndex = 0;
             for (var pi = 0; pi < methodParameters.Length; pi++)
             {
                 var methodParameter = methodParameters[pi];
-                if (SymbolEqualityComparer.Default.Equals(methodParameter.Type, compilation.CancellationToken()))
-                {
-                    continue;
-                }
-                if (methodParameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).StartsWith("global::System.IProgress<"))
+                var methodParameterType = methodParameter.Type;
+
+                if (SymbolEqualityComparer.Default.Equals(methodParameterType, tct))
                 {
                     continue;
                 }
 
-                if (correctParameters.Length <= correctParametersIndex)
+                if (methodParameterType is INamedTypeSymbol namedMethodParameterType
+                    && namedMethodParameterType.TypeArguments.Length > 0
+                    )
+                {
+                    var typeArgument0 = namedMethodParameterType.TypeArguments[0];
+
+                    var tip = compilation.IProgress(typeArgument0);
+                    if (SymbolEqualityComparer.Default.Equals(namedMethodParameterType, tip))
+                    {
+                        //it is IProgress<T>
+                        continue;
+                    }
+                }
+
+                if (correctParameters.Count <= correctParametersIndex)
                 {
                     return false;
                 }
 
                 var correctParameter = correctParameters[correctParametersIndex];
 
-                var methodParameterTypeComparer = new TypeComparer(methodParameter.Type);
-                var correctParameterTypeComparer = new TypeComparer(correctParameter.Type);
+                var methodParameterTypeComparer = new TypeComparer(methodParameterType);
+                var correctParameterTypeComparer = new TypeComparer(correctParameter);
 
                 if (!methodParameterTypeComparer.Equivalent(correctParameterTypeComparer))
                 {
@@ -421,12 +430,12 @@ namespace SyncToAsync.Extension
         private bool CheckSyncMethodParameters(
             Compilation compilation,
             IMethodSymbol methodSymbol,
-            ImmutableArray<IParameterSymbol> correctParameters
+            IReadOnlyList<ITypeSymbol> correctParameters
             )
         {
             var methodParameters = methodSymbol.Parameters;
 
-            if (correctParameters.Length != methodParameters.Length)
+            if (correctParameters.Count != methodParameters.Length)
             {
                 return false;
             }
@@ -437,7 +446,7 @@ namespace SyncToAsync.Extension
                 var correctParameter = correctParameters[pi];
 
                 var methodParameterTypeComparer = new TypeComparer(methodParameter.Type);
-                var correctParameterTypeComparer = new TypeComparer(correctParameter.Type);
+                var correctParameterTypeComparer = new TypeComparer(correctParameter);
 
                 if (!methodParameterTypeComparer.Equivalent(correctParameterTypeComparer))
                 {
@@ -448,36 +457,66 @@ namespace SyncToAsync.Extension
             return true;
         }
 
-        private ImmutableArray<IParameterSymbol> DetermineAsyncSiblingParameters(
+        private IReadOnlyList<ITypeSymbol> DetermineAsyncSiblingParameters(
             Compilation compilation,
             IMethodSymbol methodSymbol
             )
         {
-            return methodSymbol.Parameters;
-        }
-
-        private ImmutableArray<IParameterSymbol> DetermineSyncSiblingParameters(
-            Compilation compilation,
-            IMethodSymbol methodSymbol
-            )
-        {
-            var result = new List<IParameterSymbol>();
+            var result = new List<ITypeSymbol>();
 
             foreach (var parameter in methodSymbol.Parameters)
             {
-                if (SymbolEqualityComparer.Default.Equals(parameter.Type, compilation.CancellationToken()))
-                {
-                    continue;
-                }
-                if (parameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).StartsWith("global::System.IProgress<"))
-                {
-                    continue;
-                }
-
-                result.Add(parameter);
+                var parameterType = parameter.Type;
+                result.Add(parameterType);
             }
 
-            return result.ToImmutableArray();
+            return result;
+        }
+
+        private IReadOnlyList<ITypeSymbol> DetermineSyncSiblingParameters(
+            Compilation compilation,
+            IMethodSymbol methodSymbol
+            )
+        {
+            var result = new List<ITypeSymbol>();
+
+            foreach (var parameter in methodSymbol.Parameters)
+            {
+                var parameterType = parameter.Type;
+
+                if (SymbolEqualityComparer.Default.Equals(parameterType, compilation.CancellationToken()))
+                {
+                    continue;
+                }
+
+                if (parameterType is INamedTypeSymbol namedParameterType
+                    && namedParameterType.TypeArguments.Length > 0
+                    )
+                {
+                    var typeArgument0 = namedParameterType.TypeArguments[0];
+
+                    var tip = compilation.IProgress(typeArgument0);
+                    if (SymbolEqualityComparer.Default.Equals(namedParameterType, tip))
+                    {
+                        //it is IProgress<T>
+                        continue;
+                    }
+                    var tiae = compilation.IAsyncEnumerable(typeArgument0);
+                    if (SymbolEqualityComparer.Default.Equals(namedParameterType, tiae))
+                    {
+                        //it is IAsyncEnumerable<T>
+                        //for its sync sibling it will be IEnumerable<T>
+                        var tie = compilation.IEnumerable(typeArgument0);
+                        result.Add(tie);
+                    }
+                }
+                else
+                {
+                    result.Add(parameterType);
+                }
+            }
+
+            return result;
         }
 
         private static List<TypeComparer> DetermineAsyncSiblingReturnType(
@@ -499,11 +538,39 @@ namespace SyncToAsync.Extension
             }
             else
             {
-                //if sync method returns some type T, async sibling can returns Task<T>, ValueTask<T> or even something exotic with GetAwaiter, which we do not support now (TODO)
+                var returnType = methodSymbol.ReturnType;
 
-                //ORDER HAS VALUE! the first is the candidate with highest priority
-                correctReturnTypes.Add(new TypeComparer(compilation.Task(methodSymbol.ReturnType)));
-                correctReturnTypes.Add(new TypeComparer(compilation.ValueTask(methodSymbol.ReturnType)));
+                //if sync method returns IEnumerable<T> then
+                //async sibling can returns IAsyncEnumerable<T>, Task<IEnumerable<T>>, ValueTask<IEnumerable<T>>
+                //or even something exotic with GetAwaiter, which we do not support now (TODO)
+                if (methodSymbol.ReturnType is INamedTypeSymbol namedReturnType
+                    && namedReturnType.TypeArguments.Length > 0
+                    )
+                {
+                    var typeArgument0 = namedReturnType.TypeArguments[0];
+
+                    var ti = compilation.IEnumerable(typeArgument0);
+                    if (SymbolEqualityComparer.Default.Equals(ti, namedReturnType))
+                    {
+                        //it is IEnumerable<T>
+
+                        //ORDER HAS VALUE! the first is the candidate with highest priority
+                        correctReturnTypes.Add(new TypeComparer(compilation.IAsyncEnumerable(typeArgument0)));
+                        correctReturnTypes.Add(new TypeComparer(compilation.Task(returnType)));
+                        correctReturnTypes.Add(new TypeComparer(compilation.ValueTask(returnType)));
+                    }
+
+                }
+                else
+                {
+                    //if sync method returns some type T then
+                    //async sibling can returns Task<T>, ValueTask<T>
+                    //or even something exotic with GetAwaiter, which we do not support now (TODO)
+
+                    //ORDER HAS VALUE! the first is the candidate with highest priority
+                    correctReturnTypes.Add(new TypeComparer(compilation.Task(returnType)));
+                    correctReturnTypes.Add(new TypeComparer(compilation.ValueTask(returnType)));
+                }
             }
 
             return correctReturnTypes;
@@ -537,9 +604,20 @@ namespace SyncToAsync.Extension
             }
             else if (namedReturnType.IsGenericType)
             {
-                //something complex, like Task<object>, ValueTask<string>, Task<T> etc.
-                //we need to unwrap here ValueTask<string> to string here
-                correctReturnType = namedReturnType.TypeArguments[0];
+                //something complex, like Task<object>, ValueTask<string>, Task<T>, IAsyncEnumerable<T> etc.
+                var typeArgument0 = namedReturnType.TypeArguments[0];
+
+                //check for special case of IAsyncEnumerable<T>
+                var tai = compilation.IAsyncEnumerable(typeArgument0);
+                if (SymbolEqualityComparer.Default.Equals(tai, namedReturnType))
+                {
+                    correctReturnType = compilation.IEnumerable(typeArgument0);
+                }
+                else
+                {
+                    //we need to unwrap here Task<string>, ValueTask<string> to string (or other type) here
+                    correctReturnType = typeArgument0;
+                }
             }
             else
             {

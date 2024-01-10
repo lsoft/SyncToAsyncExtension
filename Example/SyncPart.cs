@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Zomp.SyncMethodGenerator;
@@ -129,6 +130,31 @@ namespace SyncAsyncExample
 
 
 
+        [Zomp.SyncMethodGenerator.CreateSyncVersion]
+        public static async IAsyncEnumerable<double> Method10Async(
+            IAsyncEnumerable<double> source,
+            int windowSize,
+            IProgress<int>? progress = null,
+            [EnumeratorCancellation] CancellationToken ct = default
+            )
+        {
+            throw new NotImplementedException();
+        }
+
+
+
+
+
+        [Zomp.SyncMethodGenerator.CreateSyncVersion]
+        public static async IAsyncEnumerable<T> Method11Async<T, U, V>(
+            IAsyncEnumerable<U> source,
+            int windowSize,
+            IProgress<V>? progress = null,
+            [EnumeratorCancellation] CancellationToken ct = default
+            )
+        {
+            throw new NotImplementedException();
+        }
 
     }
 }

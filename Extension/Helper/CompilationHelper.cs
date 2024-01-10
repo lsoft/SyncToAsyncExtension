@@ -62,6 +62,57 @@ namespace SyncToAsync.Extension
                     ;
         }
 
+        public static INamedTypeSymbol IProgress(
+            this Compilation compilation,
+            params ITypeSymbol[] genericParameters
+            )
+        {
+            if (compilation is null)
+            {
+                throw new ArgumentNullException(nameof(compilation));
+            }
+
+            return
+                compilation.GetTypeByMetadataName("System.IProgress`" + genericParameters.Length)!
+                    .Construct(genericParameters)
+                    .WithNullableAnnotation(NullableAnnotation.None) as INamedTypeSymbol
+                    ;
+        }
+
+        public static INamedTypeSymbol IAsyncEnumerable(
+            this Compilation compilation,
+            params ITypeSymbol[] genericParameters
+            )
+        {
+            if (compilation is null)
+            {
+                throw new ArgumentNullException(nameof(compilation));
+            }
+
+            return
+                compilation.GetTypeByMetadataName("System.Collections.Generic.IAsyncEnumerable`" + genericParameters.Length)!
+                    .Construct(genericParameters)
+                    .WithNullableAnnotation(NullableAnnotation.None) as INamedTypeSymbol
+                    ;
+        }
+
+        public static INamedTypeSymbol IEnumerable(
+            this Compilation compilation,
+            params ITypeSymbol[] genericParameters
+            )
+        {
+            if (compilation is null)
+            {
+                throw new ArgumentNullException(nameof(compilation));
+            }
+
+            return
+                compilation.GetTypeByMetadataName("System.Collections.Generic.IEnumerable`" + genericParameters.Length)!
+                    .Construct(genericParameters)
+                    .WithNullableAnnotation(NullableAnnotation.None) as INamedTypeSymbol
+                    ;
+        }
+
         public static INamedTypeSymbol Task(
             this Compilation compilation
             )
