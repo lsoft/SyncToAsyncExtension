@@ -23,6 +23,11 @@ namespace SyncToAsync.Shared.Dto
             get;
             set;
         }
+        public bool Idle
+        {
+            get;
+            set;
+        }
         public CodeLensSibling? Sibling
         {
             get;
@@ -34,6 +39,16 @@ namespace SyncToAsync.Shared.Dto
             return new SiblingInformationContainer
             {
                 Disabled = true,
+                Idle = false
+            };
+        }
+
+        public static SiblingInformationContainer GetIdle(CodeLensTarget target)
+        {
+            return new SiblingInformationContainer
+            {
+                Disabled = false,
+                Idle = true
             };
         }
 
@@ -42,6 +57,7 @@ namespace SyncToAsync.Shared.Dto
             return new SiblingInformationContainer
             {
                 Disabled = false,
+                Idle = false,
                 Sibling = null
             };
         }
@@ -54,6 +70,7 @@ namespace SyncToAsync.Shared.Dto
             return new SiblingInformationContainer
             {
                 Sibling = sibling,
+                Idle = false,
                 Title = sibling.MethodName,
                 Disabled = false,
             };

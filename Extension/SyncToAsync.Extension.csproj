@@ -53,6 +53,7 @@
     <Compile Include="CodeLens\CodeLensConnectionHandler.cs" />
     <Compile Include="CodeLens\CodeLensListener.cs" />
     <Compile Include="Helper\CompilationHelper.cs" />
+    <Compile Include="Helper\RoslynDocumentHelper.cs" />
     <Compile Include="Helper\VisualStudioDocumentHelper.cs" />
     <Compile Include="Options\General.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

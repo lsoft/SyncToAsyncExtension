@@ -138,7 +138,8 @@ namespace SyncToAsync.Extension.Helper
             var r = await workspace.CurrentSolution.GetSourceGeneratedDocumentAsync(documentId, CancellationToken.None);
 
             var project = workspace.CurrentSolution.GetProject(documentId.ProjectId);
-            var sgDocument = (await project.GetSourceGeneratedDocumentsAsync(CancellationToken.None)).First(d => d.Id.Equals(documentId));
+            var sgDocument = await project.GetDocumentByDocumentIdAsync(documentId);
+            //var sgDocument = (await project.GetSourceGeneratedDocumentsAsync(CancellationToken.None)).First(d => d.Id.Equals(documentId));
 
             var extensions = _componentModel.GetExtensions<Microsoft.CodeAnalysis.Host.IWorkspaceService>().ToList();
             var visualStudioDocumentNavigationService = extensions.Find(s => s.GetType().Name == "VisualStudioDocumentNavigationService");

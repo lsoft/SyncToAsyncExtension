@@ -110,6 +110,19 @@ namespace SyncToAsync.CodeLens
                     return response;
                 }
 
+                if (_siblingInfo.Idle)
+                {
+                    var response = new CodeLensDataPointDescriptor()
+                    {
+                        Description = $"Sync<->Async: Idle",
+                        TooltipText = $"Sync-Async actual status",
+                        IntValue = null, // no int value
+                        //ImageId = GetTypeIcon(),
+                    };
+
+                    return response;
+                }
+
                 if (_siblingInfo.Sibling is null)
                 {
                     var response = new CodeLensDataPointDescriptor()

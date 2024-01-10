@@ -140,6 +140,8 @@ namespace SyncToAsync.Extension
                         //wait for next key press, no need to infinitely refresh codelenses without text changes
                         _restartSignal.WaitOne();
 
+                        RefreshCodelenses(true);
+
                         var restart = false;
                         do
                         {
@@ -147,10 +149,7 @@ namespace SyncToAsync.Extension
                         }
                         while (restart);
 
-                        //refresh codelenses
-                        CodeLensConnectionHandler.RefreshAllCodeLensDataPointsAsync()
-                            .FileAndForget(nameof(CodeLensConnectionHandler.RefreshAllCodeLensDataPointsAsync))
-                            ;
+                        RefreshCodelenses(false);
 
                         _restartSignal.Reset();
                     }
@@ -162,6 +161,15 @@ namespace SyncToAsync.Extension
                     }
                 }
                 while (true);
+            }
+
+            private static void RefreshCodelenses(bool idle)
+            {
+                CodeLensListener.IdleMode = idle;
+
+                CodeLensConnectionHandler.RefreshAllCodeLensDataPointsAsync()
+                    .FileAndForget(nameof(CodeLensConnectionHandler.RefreshAllCodeLensDataPointsAsync))
+                    ;
             }
         }
     }

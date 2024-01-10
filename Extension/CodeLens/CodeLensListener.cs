@@ -18,6 +18,7 @@ using System.Collections.Immutable;
 using Microsoft.VisualStudio.Language.Intellisense;
 using System.Reflection.Metadata;
 using System.IO;
+using SyncToAsync.Extension.Helper;
 
 namespace SyncToAsync.Extension
 {
@@ -26,6 +27,8 @@ namespace SyncToAsync.Extension
     public class CodeLensListener : ICodeLensCallbackListener, ICodeLensListener
     {
         private const string AsyncSuffix = "Async";
+
+        public static bool IdleMode = false;
 
         private readonly IComponentModel _componentModel;
 
@@ -55,6 +58,11 @@ namespace SyncToAsync.Extension
                 return SiblingInformationContainer.GetDisabled(target);
             }
 
+            if (IdleMode)
+            {
+                return SiblingInformationContainer.GetIdle(target);
+            }
+
             if (!target.MethodSpanStart.HasValue || !target.MethodSpanLength.HasValue)
             {
                 return SiblingInformationContainer.GetNoSibling(target);
@@ -79,7 +87,7 @@ namespace SyncToAsync.Extension
                 return SiblingInformationContainer.GetNoSibling(target);
             }
 
-            var document = project.GetDocument(
+            var document = await project.GetDocumentByDocumentIdAsync(
                 DocumentId.CreateFromSerialized(pid, target.RoslynDocumentIdGuid)
                 );
             if (document == null)
@@ -239,56 +247,65 @@ namespace SyncToAsync.Extension
             MethodDeclarationSyntax mds
             )
         {
-            var compilation = semanticModel.Compilation;
-
-            var methods = GetAllMethods(typeSymbol);
-
-            //determine the return type for sibling
-            var siblingReturnTypes = DetermineAsyncSiblingReturnType(compilation, methodSymbol);
-            if (siblingReturnTypes == null || siblingReturnTypes.Count == 0)
+            try
             {
-                return null;
-            }
-            //take methods with correct return type
-            var methodsWithCorrectReturnType = new List<IMethodSymbol>();
-            //search for methods with async modifier (the first priority)
-            foreach (var siblingReturnType in siblingReturnTypes)
-            {
-                var filtered = methods
-                    .Where(m => m.IsAsync && siblingReturnType.Equivalent(m.ReturnType))
+                var compilation = semanticModel.Compilation;
+
+                var methods = GetAllMethods(typeSymbol);
+
+                //determine the return type for sibling
+                var siblingReturnTypes = DetermineAsyncSiblingReturnType(compilation, methodSymbol);
+                if (siblingReturnTypes == null || siblingReturnTypes.Count == 0)
+                {
+                    return null;
+                }
+                //take methods with correct return type
+                var methodsWithCorrectReturnType = new List<IMethodSymbol>();
+                //search for methods with async modifier (the first priority)
+                foreach (var siblingReturnType in siblingReturnTypes)
+                {
+                    var filtered = methods
+                        .Where(m => m.IsAsync && siblingReturnType.Equivalent(m.ReturnType))
+                        .ToList()
+                        ;
+                    methodsWithCorrectReturnType.AddRange(filtered);
+                }
+                //search for methods without async modifier (the second priority)
+                foreach (var siblingReturnType in siblingReturnTypes)
+                {
+                    var filtered = methods
+                        .Where(m => !m.IsAsync && !m.ReturnsVoid && siblingReturnType.Equivalent(m.ReturnType))
+                        .ToList()
+                        ;
+                    methodsWithCorrectReturnType.AddRange(filtered);
+                }
+
+                //filter these methods with correct method's parameters
+                var correctParameters = DetermineAsyncSiblingParameters(compilation, methodSymbol);
+                if (correctParameters == null)
+                {
+                    return null;
+                }
+                var methodsCandidate = methodsWithCorrectReturnType
+                    .Where(m => CheckAsyncMethodParameters(compilation, m, correctParameters))
                     .ToList()
                     ;
-                methodsWithCorrectReturnType.AddRange(filtered);
+
+                var idealMethodName = methodSymbol.Name + AsyncSuffix;
+                var idealMethod = methodsCandidate.FirstOrDefault(m => m.Name == idealMethodName);
+                if (idealMethod != null)
+                {
+                    return idealMethod;
+                }
+
+                return methodsCandidate.FirstOrDefault();
             }
-            //search for methods without async modifier (the second priority)
-            foreach (var siblingReturnType in siblingReturnTypes)
+            catch(Exception ex)
             {
-                var filtered = methods
-                    .Where(m => !m.IsAsync && !m.ReturnsVoid && siblingReturnType.Equivalent(m.ReturnType))
-                    .ToList()
-                    ;
-                methodsWithCorrectReturnType.AddRange(filtered);
+                Logging.LogVS(ex);
             }
 
-            //filter these methods with correct method's parameters
-            var correctParameters = DetermineAsyncSiblingParameters(compilation, methodSymbol);
-            if (correctParameters == null)
-            {
-                return null;
-            }
-            var methodsCandidate = methodsWithCorrectReturnType
-                .Where(m => CheckAsyncMethodParameters(compilation, m, correctParameters))
-                .ToList()
-                ;
-
-            var idealMethodName = methodSymbol.Name + AsyncSuffix;
-            var idealMethod = methodsCandidate.FirstOrDefault(m => m.Name == idealMethodName);
-            if (idealMethod != null)
-            {
-                return idealMethod;
-            }
-            
-            return methodsCandidate.FirstOrDefault();
+            return null;
         }
 
         private IMethodSymbol? FindSyncSiblingMethod(
@@ -370,9 +387,17 @@ namespace SyncToAsync.Extension
                     continue;
                 }
 
+                if (correctParameters.Length <= correctParametersIndex)
+                {
+                    return false;
+                }
+
                 var correctParameter = correctParameters[correctParametersIndex];
 
-                if (!SymbolEqualityComparer.IncludeNullability.Equals(methodParameter, correctParameter))
+                var methodParameterTypeComparer = new TypeComparer(methodParameter.Type);
+                var correctParameterTypeComparer = new TypeComparer(correctParameter.Type);
+
+                if (!methodParameterTypeComparer.Equivalent(correctParameterTypeComparer))
                 {
                     return false;
                 }
@@ -401,7 +426,10 @@ namespace SyncToAsync.Extension
                 var methodParameter = methodParameters[pi];
                 var correctParameter = correctParameters[pi];
 
-                if (!SymbolEqualityComparer.Default.Equals(methodParameter, correctParameter))
+                var methodParameterTypeComparer = new TypeComparer(methodParameter.Type);
+                var correctParameterTypeComparer = new TypeComparer(correctParameter.Type);
+
+                if (!methodParameterTypeComparer.Equivalent(correctParameterTypeComparer))
                 {
                     return false;
                 }
@@ -442,12 +470,12 @@ namespace SyncToAsync.Extension
             return result.ToImmutableArray();
         }
 
-        private static List<ReturnTypeComparer> DetermineAsyncSiblingReturnType(
+        private static List<TypeComparer> DetermineAsyncSiblingReturnType(
             Compilation compilation,
             IMethodSymbol methodSymbol
             )
         {
-            var correctReturnTypes = new List<ReturnTypeComparer>();
+            var correctReturnTypes = new List<TypeComparer>();
 
             var tvoid = compilation.Void();
             if (methodSymbol.ReturnsVoid)
@@ -455,23 +483,23 @@ namespace SyncToAsync.Extension
                 //if sync method returns void, async sibling can returns void, Task, ValueTask or even something exotic with GetAwaiter, which we do not support now (TODO)
 
                 //ORDER HAS VALUE! the first is the candidate with highest priority
-                correctReturnTypes.Add(new ReturnTypeComparer(compilation.Task()));
-                correctReturnTypes.Add(new ReturnTypeComparer(compilation.ValueTask()));
-                correctReturnTypes.Add(new ReturnTypeComparer(tvoid));
+                correctReturnTypes.Add(new TypeComparer(compilation.Task()));
+                correctReturnTypes.Add(new TypeComparer(compilation.ValueTask()));
+                correctReturnTypes.Add(new TypeComparer(tvoid));
             }
             else
             {
                 //if sync method returns some type T, async sibling can returns Task<T>, ValueTask<T> or even something exotic with GetAwaiter, which we do not support now (TODO)
 
                 //ORDER HAS VALUE! the first is the candidate with highest priority
-                correctReturnTypes.Add(new ReturnTypeComparer(compilation.Task(methodSymbol.ReturnType)));
-                correctReturnTypes.Add(new ReturnTypeComparer(compilation.ValueTask(methodSymbol.ReturnType)));
+                correctReturnTypes.Add(new TypeComparer(compilation.Task(methodSymbol.ReturnType)));
+                correctReturnTypes.Add(new TypeComparer(compilation.ValueTask(methodSymbol.ReturnType)));
             }
 
             return correctReturnTypes;
         }
 
-        private static ReturnTypeComparer? DetermineSyncSiblingReturnType(
+        private static TypeComparer? DetermineSyncSiblingReturnType(
             Compilation compilation,
             IMethodSymbol methodSymbol
             )
@@ -509,25 +537,25 @@ namespace SyncToAsync.Extension
                 correctReturnType = null;
             }
 
-            return new ReturnTypeComparer(correctReturnType);
+            return new TypeComparer(correctReturnType);
         }
     }
 
-    public readonly struct ReturnTypeComparer 
+    public readonly struct TypeComparer 
     {
         public readonly ITypeSymbol Type;
 
-        public ReturnTypeComparer(
+        public TypeComparer(
             ITypeSymbol type
             )
         {
             Type = type;
         }
 
-        public bool Equivalent(ReturnTypeComparer comparer)
+        public bool Equivalent(TypeComparer comparer)
         {
             var comparerType = comparer.Type;
-            return Equals(comparerType);
+            return Equivalent(comparerType);
         }
 
         public bool Equivalent(ITypeSymbol comparerType)
