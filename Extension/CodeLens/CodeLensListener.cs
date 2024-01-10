@@ -315,52 +315,62 @@ namespace SyncToAsync.Extension
             MethodDeclarationSyntax mds
             )
         {
-            var compilation = semanticModel.Compilation;
-
-            var methods = GetAllMethods(typeSymbol);
-
-            //determine the return type for sibling
-            var siblingReturnType1 = DetermineSyncSiblingReturnType(compilation, methodSymbol);
-            if (!siblingReturnType1.HasValue)
+            try
             {
-                return null;
-            }
-            var siblingReturnType = siblingReturnType1.Value;
-            //take methods with correct return type
-            var methodsWithCorrectReturnType = methods
-                .Where(m => siblingReturnType.Equivalent(m.ReturnType))
-                .ToList()
-                ;
+                var compilation = semanticModel.Compilation;
 
-            //filter these methods with correct method's parameters
-            var correctParameters = DetermineSyncSiblingParameters(compilation, methodSymbol);
-            if (correctParameters == null)
-            {
-                return null;
-            }
-            var methodsCandidate = methodsWithCorrectReturnType
-                .Where(m => CheckSyncMethodParameters(compilation, m, correctParameters))
-                .ToList()
-                ;
+                var methods = GetAllMethods(typeSymbol);
 
-            var idealMethodName = methodSymbol.Name;
-            if (idealMethodName.Length > AsyncSuffix.Length && idealMethodName.EndsWith(AsyncSuffix))
-            {
-                idealMethodName = idealMethodName.Substring(0, idealMethodName.Length - AsyncSuffix.Length);
+                //determine the return type for sibling
+                var siblingReturnType1 = DetermineSyncSiblingReturnType(compilation, methodSymbol);
+                if (!siblingReturnType1.HasValue)
+                {
+                    return null;
+                }
+                var siblingReturnType = siblingReturnType1.Value;
+                //take methods with correct return type
+                var methodsWithCorrectReturnType = methods
+                    .Where(m => siblingReturnType.Equivalent(m.ReturnType))
+                    .ToList()
+                    ;
+
+                //filter these methods with correct method's parameters
+                var correctParameters = DetermineSyncSiblingParameters(compilation, methodSymbol);
+                if (correctParameters == null)
+                {
+                    return null;
+                }
+                var methodsCandidate = methodsWithCorrectReturnType
+                    .Where(m => CheckSyncMethodParameters(compilation, m, correctParameters))
+                    .ToList()
+                    ;
+
+                var idealMethodName = methodSymbol.Name;
+                if (idealMethodName.Length > AsyncSuffix.Length && idealMethodName.EndsWith(AsyncSuffix))
+                {
+                    idealMethodName = idealMethodName.Substring(0, idealMethodName.Length - AsyncSuffix.Length);
+                }
+                var idealMethod = methodsCandidate.FirstOrDefault(m => m.Name == idealMethodName);
+                if (idealMethod != null)
+                {
+                    return idealMethod;
+                }
+
+                return methodsCandidate.FirstOrDefault();
             }
-            var idealMethod = methodsCandidate.FirstOrDefault(m => m.Name == idealMethodName);
-            if (idealMethod != null)
+            catch (Exception ex)
             {
-                return idealMethod;
+                Logging.LogVS(ex);
             }
 
-            return methodsCandidate.FirstOrDefault();
+            return null;
         }
 
         private static List<IMethodSymbol> GetAllMethods(INamedTypeSymbol typeSymbol)
         {
             return typeSymbol
                 .GetMembers()
+                .Where(m => m is IMethodSymbol)
                 .Cast<IMethodSymbol>()
                 .Where(m => m.Kind == SymbolKind.Method && !typeSymbol.Constructors.Any(c => SymbolEqualityComparer.IncludeNullability.Equals(c, m)))
                 .ToList();
