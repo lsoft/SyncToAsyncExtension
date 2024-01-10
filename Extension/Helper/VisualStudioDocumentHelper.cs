@@ -17,6 +17,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.TextManager.Interop;
+using SyncToAsync.Shared;
 using IServiceProvider = Microsoft.VisualStudio.OLE.Interop.IServiceProvider;
 
 namespace SyncToAsync.Extension.Helper
@@ -133,52 +134,127 @@ namespace SyncToAsync.Extension.Helper
             int length
             )
         {
-            var workspace = (Workspace)_componentModel.GetService<VisualStudioWorkspace>();
+            try
+            {
+                var workspace = (Workspace)_componentModel.GetService<VisualStudioWorkspace>();
 
-            var r = await workspace.CurrentSolution.GetSourceGeneratedDocumentAsync(documentId, CancellationToken.None);
-
-            var project = workspace.CurrentSolution.GetProject(documentId.ProjectId);
-            var sgDocument = await project.GetDocumentByDocumentIdAsync(documentId);
-            //var sgDocument = (await project.GetSourceGeneratedDocumentsAsync(CancellationToken.None)).First(d => d.Id.Equals(documentId));
-
-            var extensions = _componentModel.GetExtensions<Microsoft.CodeAnalysis.Host.IWorkspaceService>().ToList();
-            var visualStudioDocumentNavigationService = extensions.Find(s => s.GetType().Name == "VisualStudioDocumentNavigationService");
-            var visualStudioDocumentNavigationServiceType = visualStudioDocumentNavigationService.GetType();
-            var getLocationForSpanAsyncMethod = visualStudioDocumentNavigationServiceType.GetMethod("GetLocationForSpanAsync");
-            var getLocationForSpanAsyncTask = (Task)getLocationForSpanAsyncMethod.Invoke(
-                visualStudioDocumentNavigationService,
-                new object[]
+                var project = workspace.CurrentSolution.GetProject(documentId.ProjectId);
+                if (project is null)
                 {
-                    workspace,
-                    sgDocument.Id,
-                    new Microsoft.CodeAnalysis.Text.TextSpan(
-                        position,
-                        0 //length
-                        ),
-                    true, //allowInvalidSpan
-                    CancellationToken.None
+                    return false;
                 }
-                );
-            await getLocationForSpanAsyncTask;
 
-            var navigableLocation = getLocationForSpanAsyncTask.GetType().GetProperty("Result").GetValue(getLocationForSpanAsyncTask);
-
-            var navigateOptionsType = navigableLocation.GetType().Assembly.GetType("Microsoft.CodeAnalysis.Navigation.NavigationOptions");
-            var navigateOptions = navigateOptionsType.GetConstructor(new Type[0]).Invoke(new object[0]);
-
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(CancellationToken.None);
-
-            var navigateToAsyncMethod = navigableLocation.GetType().GetMethod("NavigateToAsync");
-            var navigateToAsyncMethodTask = (Task)navigateToAsyncMethod.Invoke(
-                navigableLocation,
-                new object[]
+                var sgDocument = await project.GetDocumentByDocumentIdAsync(documentId);
+                if (sgDocument is null)
                 {
-                    navigateOptions,
-                    CancellationToken.None
-                });
-            await navigateToAsyncMethodTask;
-            var navigateToAsyncMethodSuccess = (bool)navigateToAsyncMethodTask.GetType().GetProperty("Result").GetValue(navigateToAsyncMethodTask);
-            return navigateToAsyncMethodSuccess;
+                    return false;
+                }
+
+                var extensions = _componentModel.GetExtensions<Microsoft.CodeAnalysis.Host.IWorkspaceService>().ToList();
+
+                var visualStudioDocumentNavigationService = extensions.FirstOrDefault(s => s.GetType().Name == "VisualStudioDocumentNavigationService");
+                if (visualStudioDocumentNavigationService is null)
+                {
+                    return false;
+                }
+
+                var visualStudioDocumentNavigationServiceType = visualStudioDocumentNavigationService.GetType();
+                var getLocationForSpanAsyncMethod = visualStudioDocumentNavigationServiceType.GetMethod("GetLocationForSpanAsync");
+                if (getLocationForSpanAsyncMethod is null)
+                {
+                    return false;
+                }
+
+                var getLocationForSpanAsyncTask = getLocationForSpanAsyncMethod.Invoke(
+                    visualStudioDocumentNavigationService,
+                    new object[]
+                    {
+                        workspace,
+                        sgDocument.Id,
+                        new Microsoft.CodeAnalysis.Text.TextSpan(
+                            position,
+                            0 //length
+                            ),
+                        true, //allowInvalidSpan
+                        CancellationToken.None
+                    }) as Task;
+                if (getLocationForSpanAsyncTask is null)
+                {
+                    return false;
+                }
+
+                await getLocationForSpanAsyncTask;
+
+                var navigableLocationResultProperty = getLocationForSpanAsyncTask.GetType().GetProperty("Result");
+                if (navigableLocationResultProperty is null)
+                {
+                    return false;
+                }
+
+                var navigableLocation = navigableLocationResultProperty.GetValue(getLocationForSpanAsyncTask);
+                if (navigableLocation is null)
+                {
+                    return false;
+                }
+
+                var navigableLocationType = navigableLocation.GetType();
+
+                var navigateOptionsType = navigableLocationType.Assembly.GetType("Microsoft.CodeAnalysis.Navigation.NavigationOptions");
+                if (navigateOptionsType is null)
+                {
+                    return false;
+                }
+
+                var navigateOptionsConstructor = navigateOptionsType.GetConstructor(new Type[0]);
+                if (navigateOptionsConstructor is null)
+                {
+                    return false;
+                }
+
+                var navigateOptions = navigateOptionsConstructor.Invoke(new object[0]);
+                if (navigateOptions is null)
+                {
+                    return false;
+                }
+
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(CancellationToken.None);
+
+                var navigateToAsyncMethod = navigableLocationType.GetMethod("NavigateToAsync");
+                if (navigateToAsyncMethod is null)
+                {
+                    return false;
+                }
+
+                var navigateToAsyncMethodTask = navigateToAsyncMethod.Invoke(
+                    navigableLocation,
+                    new object[]
+                    {
+                        navigateOptions,
+                        CancellationToken.None
+                    }) as Task;
+                if (navigateToAsyncMethodTask is null)
+                {
+                    return false;
+                }
+
+                await navigateToAsyncMethodTask;
+
+                var navigateToAsyncMethodTaskType = navigateToAsyncMethodTask.GetType();
+                var navigateToAsyncMethodResultProperty = navigateToAsyncMethodTaskType.GetProperty("Result");
+                if (navigateToAsyncMethodResultProperty is null)
+                {
+                    return false;
+                }
+
+                var navigateToAsyncMethodSuccess = (bool)navigateToAsyncMethodResultProperty.GetValue(navigateToAsyncMethodTask);
+                return navigateToAsyncMethodSuccess;
+            }
+            catch(Exception ex)
+            {
+                Logging.LogVS(ex);
+            }
+
+            return false;
         }
 
         public void OpenNavigate(
