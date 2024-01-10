@@ -52,9 +52,14 @@
     <Compile Include="CodeLenseUserControlViewModel.cs" />
     <Compile Include="CodeLens\CodeLensConnectionHandler.cs" />
     <Compile Include="CodeLens\CodeLensListener.cs" />
+    <Compile Include="CodeLens\Searcher\Async\AsyncSiblingSearcher.cs" />
+    <Compile Include="CodeLens\Searcher\Sync\SyncSiblingSearcher.cs" />
+    <Compile Include="CodeLens\Searcher\SiblingSearcher.cs" />
+    <Compile Include="CodeLens\Searcher\TypeComparer.cs" />
     <Compile Include="Commands\GotoSiblingCommand.cs" />
     <Compile Include="Helper\CompilationHelper.cs" />
     <Compile Include="Helper\RoslynDocumentHelper.cs" />
+    <Compile Include="Helper\SymbolHelper.cs" />
     <Compile Include="Helper\VisualStudioDocumentHelper.cs" />
     <Compile Include="Options\General.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

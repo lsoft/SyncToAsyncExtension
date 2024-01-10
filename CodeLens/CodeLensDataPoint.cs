@@ -17,8 +17,8 @@ namespace SyncToAsync.CodeLens
     {
         public static readonly CodeLensDetailEntryCommand Command = new CodeLensDetailEntryCommand
         {
-            CommandId = 0x0100,
-            CommandSet = new Guid("26c17eb2-8732-4870-9401-30fbc398f6d5")
+            CommandId = 0x0100, //must match with the command id from vsct file
+            CommandSet = new Guid("26c17eb2-8732-4870-9401-30fbc398f6d5") //must match with the command group guid from vsct file
         };
 
 
