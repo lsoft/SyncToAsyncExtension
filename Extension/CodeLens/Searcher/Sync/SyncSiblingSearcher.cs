@@ -44,7 +44,7 @@ namespace SyncToAsync.Extension.CodeLens.Searcher.Sync
                     return null;
                 }
                 var methodsCandidate = methodsWithCorrectReturnType
-                    .Where(m => CheckMethodParameters(compilation, m, correctParameters))
+                    .Where(m => correctParameters.MatchMethodParameters(m))
                     .ToList()
                     ;
 
@@ -103,18 +103,21 @@ namespace SyncToAsync.Extension.CodeLens.Searcher.Sync
             return true;
         }
 
-        private IReadOnlyList<ITypeSymbol> DetermineSiblingParameters(
+        private MethodParametersCollection DetermineSiblingParameters(
             Compilation compilation,
             IMethodSymbol methodSymbol
             )
         {
-            var result = new List<ITypeSymbol>();
+            var result = new MethodParametersCollection(
+                compilation
+                );
 
+            var tct = compilation.CancellationToken();
             foreach (var parameter in methodSymbol.Parameters)
             {
                 var parameterType = parameter.Type;
 
-                if (SymbolEqualityComparer.Default.Equals(parameterType, compilation.CancellationToken()))
+                if (SymbolEqualityComparer.Default.Equals(parameterType, tct))
                 {
                     continue;
                 }
@@ -129,6 +132,7 @@ namespace SyncToAsync.Extension.CodeLens.Searcher.Sync
                     if (SymbolEqualityComparer.Default.Equals(namedParameterType, tip))
                     {
                         //it is IProgress<T>
+                        //we should remove this parameter from the parameter list for sync sibling
                         continue;
                     }
                     var tiae = compilation.IAsyncEnumerable(typeArgument0);
@@ -137,12 +141,14 @@ namespace SyncToAsync.Extension.CodeLens.Searcher.Sync
                         //it is IAsyncEnumerable<T>
                         //for its sync sibling it will be IEnumerable<T>
                         var tie = compilation.IEnumerable(typeArgument0);
-                        result.Add(tie);
+                        var atcp = new AnyTypeSymbolCollection(tie);
+                        result.Add(atcp);
                     }
                 }
                 else
                 {
-                    result.Add(parameterType);
+                    var atcp = new AnyTypeSymbolCollection(parameterType);
+                    result.Add(atcp);
                 }
             }
 

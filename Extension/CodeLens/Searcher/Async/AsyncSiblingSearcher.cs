@@ -60,7 +60,7 @@ namespace SyncToAsync.Extension.CodeLens.Searcher.Async
                     return null;
                 }
                 var methodsCandidate = methodsWithCorrectReturnType
-                    .Where(m => CheckMethodParameters(compilation, m, correctParameters))
+                    .Where(m => correctParameters.MatchMethodParameters(m))
                     .ToList()
                     ;
 
@@ -81,75 +81,21 @@ namespace SyncToAsync.Extension.CodeLens.Searcher.Async
             return null;
         }
 
-
-
-        private bool CheckMethodParameters(
-            Compilation compilation,
-            IMethodSymbol methodSymbol,
-            IReadOnlyList<ITypeSymbol> correctParameters
-            )
-        {
-            var methodParameters = methodSymbol.Parameters;
-
-            var tct = compilation.CancellationToken();
-
-            var correctParametersIndex = 0;
-            for (var pi = 0; pi < methodParameters.Length; pi++)
-            {
-                var methodParameter = methodParameters[pi];
-                var methodParameterType = methodParameter.Type;
-
-                if (SymbolEqualityComparer.Default.Equals(methodParameterType, tct))
-                {
-                    continue;
-                }
-
-                if (methodParameterType is INamedTypeSymbol namedMethodParameterType
-                    && namedMethodParameterType.TypeArguments.Length > 0
-                    )
-                {
-                    var typeArgument0 = namedMethodParameterType.TypeArguments[0];
-
-                    var tip = compilation.IProgress(typeArgument0);
-                    if (SymbolEqualityComparer.Default.Equals(namedMethodParameterType, tip))
-                    {
-                        //it is IProgress<T>
-                        continue;
-                    }
-                }
-
-                if (correctParameters.Count <= correctParametersIndex)
-                {
-                    return false;
-                }
-
-                var correctParameter = correctParameters[correctParametersIndex];
-
-                var methodParameterTypeComparer = new TypeComparer(methodParameterType);
-                var correctParameterTypeComparer = new TypeComparer(correctParameter);
-
-                if (!methodParameterTypeComparer.Equivalent(correctParameterTypeComparer))
-                {
-                    return false;
-                }
-
-                correctParametersIndex++;
-            }
-
-            return true;
-        }
-
-        private IReadOnlyList<ITypeSymbol> DetermineSiblingParameters(
+        private MethodParametersCollection DetermineSiblingParameters(
             Compilation compilation,
             IMethodSymbol methodSymbol
             )
         {
-            var result = new List<ITypeSymbol>();
+            var result = new MethodParametersCollection(
+                compilation
+                );
 
             foreach (var parameter in methodSymbol.Parameters)
             {
                 var parameterType = parameter.Type;
-                result.Add(parameterType);
+
+                var atcp = new AnyTypeSymbolCollection(parameterType);
+                result.Add(atcp);
             }
 
             return result;
@@ -211,6 +157,5 @@ namespace SyncToAsync.Extension.CodeLens.Searcher.Async
 
             return correctReturnTypes;
         }
-
     }
 }
