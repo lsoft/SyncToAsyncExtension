@@ -143,9 +143,13 @@ namespace SyncToAsync.CodeLens
                 }
 
                 {
+                    var strict = _siblingInfo.Sibling.IsStrictCompliance
+                        ? string.Empty
+                        : " (not strict compliance)"
+                        ;
                     var response = new CodeLensDataPointDescriptor()
                     {
-                        Description = $"Go to " + _siblingInfo.Title,
+                        Description = $"Go to {_siblingInfo.Title}{strict}",
                         TooltipText = $"Sync-Async actual status",
                         IntValue = null, // no int value
                         //ImageId = GetTypeIcon(),

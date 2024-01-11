@@ -24,6 +24,11 @@ namespace SyncToAsync.Shared.Dto
             get;
             set;
         }
+        public bool IsStrictCompliance
+        {
+            get;
+            set;
+        }
         public string MethodName
         {
             get;
@@ -50,6 +55,7 @@ namespace SyncToAsync.Shared.Dto
             Guid documentGuid,
             string filePath,
             bool isSourceGeneratedDocument,
+            bool isStrictCompliance,
             string methodName,
             string methodBody,
             int? methodSpanStart,
@@ -70,6 +76,7 @@ namespace SyncToAsync.Shared.Dto
             DocumentGuid = documentGuid;
             FilePath = filePath;
             IsSourceGeneratedDocument = isSourceGeneratedDocument;
+            IsStrictCompliance = isStrictCompliance;
             MethodName = methodName;
             MethodBody = methodBody;
             MethodSpanStart = methodSpanStart;

@@ -22,7 +22,7 @@ namespace SyncToAsync.Extension.CodeLens.Searcher
             
         }
 
-        public async Task<IMethodSymbol?> FindSiblingMethodAsync(
+        public async Task<SiblingMethodResult> FindSiblingMethodAsync(
             Document document,
             TextSpan span
             )
@@ -31,31 +31,31 @@ namespace SyncToAsync.Extension.CodeLens.Searcher
             var methodNode = root.FindNode(new TextSpan(span.Start, span.Length));
             if (methodNode is not MethodDeclarationSyntax mds)
             {
-                return null;
+                return SiblingMethodResult.NotFound;
             }
 
             var semanticModel = await document.GetSemanticModelAsync();
             if (semanticModel == null)
             {
-                return null;
+                return SiblingMethodResult.NotFound;
             }
 
             var methodSymbol = semanticModel.GetDeclaredSymbol(mds) as IMethodSymbol;
             if (methodSymbol == null)
             {
-                return null;
+                return SiblingMethodResult.NotFound;
             }
 
             var tds = mds.Up<TypeDeclarationSyntax>();
             if (tds == null)
             {
-                return null;
+                return SiblingMethodResult.NotFound;
             }
 
             var typeSymbol = semanticModel.GetDeclaredSymbol(tds) as INamedTypeSymbol;
             if (typeSymbol == null)
             {
-                return null;
+                return SiblingMethodResult.NotFound;
             }
 
 
@@ -110,7 +110,7 @@ namespace SyncToAsync.Extension.CodeLens.Searcher
                 );
         }
 
-        private IMethodSymbol? FindSyncSiblingMethod(
+        private SiblingMethodResult FindSyncSiblingMethod(
             SemanticModel semanticModel,
             INamedTypeSymbol typeSymbol,
             IMethodSymbol methodSymbol
@@ -125,7 +125,7 @@ namespace SyncToAsync.Extension.CodeLens.Searcher
                 );
         }
 
-        private IMethodSymbol? FindAsyncSiblingMethod(
+        private SiblingMethodResult FindAsyncSiblingMethod(
             SemanticModel semanticModel,
             INamedTypeSymbol typeSymbol,
             IMethodSymbol methodSymbol

@@ -12,7 +12,7 @@ namespace SyncToAsync.Extension.CodeLens.Searcher.Sync
 {
     public sealed class SyncSiblingSearcher
     {
-        public IMethodSymbol? FindSiblingMethod(
+        public SiblingMethodResult FindSiblingMethod(
             SemanticModel semanticModel,
             INamedTypeSymbol typeSymbol,
             IMethodSymbol methodSymbol
@@ -28,7 +28,7 @@ namespace SyncToAsync.Extension.CodeLens.Searcher.Sync
                 var siblingReturnType = DetermineSiblingReturnType(compilation, methodSymbol);
                 if (siblingReturnType is null)
                 {
-                    return null;
+                    return SiblingMethodResult.NotFound;
                 }
 
                 //take methods with correct return type
@@ -41,12 +41,16 @@ namespace SyncToAsync.Extension.CodeLens.Searcher.Sync
                 var correctParameters = DetermineSiblingParameters(compilation, methodSymbol);
                 if (correctParameters == null)
                 {
-                    return null;
+                    return SiblingMethodResult.NotFound;
                 }
                 var methodsCandidate = methodsWithCorrectReturnType
                     .Where(m => correctParameters.MatchMethodParameters(m))
                     .ToList()
                     ;
+                if (methodsCandidate.Count == 0)
+                {
+                    return SiblingMethodResult.NotFound;
+                }
 
                 var idealMethodName = methodSymbol.Name;
                 if (idealMethodName.Length > CodeLensListener.AsyncSuffix.Length
@@ -58,17 +62,18 @@ namespace SyncToAsync.Extension.CodeLens.Searcher.Sync
                 var idealMethod = methodsCandidate.FirstOrDefault(m => m.Name == idealMethodName);
                 if (idealMethod != null)
                 {
-                    return idealMethod;
+                    return new SiblingMethodResult(idealMethod, true);
                 }
 
-                return methodsCandidate.FirstOrDefault();
+                var notIdealMethod = methodsCandidate.First();
+                return new SiblingMethodResult(notIdealMethod, false);
             }
             catch (Exception ex)
             {
                 Logging.LogVS(ex);
             }
 
-            return null;
+            return SiblingMethodResult.NotFound;
         }
 
 

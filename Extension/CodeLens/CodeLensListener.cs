@@ -93,14 +93,16 @@ namespace SyncToAsync.Extension
 
 
             var searcher = new SiblingSearcher();
-            var siblingSymbol = await searcher.FindSiblingMethodAsync(
+            var siblingSearchResult = await searcher.FindSiblingMethodAsync(
                 document,
                 new TextSpan(
                     target.MethodSpanStart.Value,
                     target.MethodSpanLength.Value
                     )
                 );
-            if (siblingSymbol == null)
+            var siblingSymbol = siblingSearchResult.SiblingMethod;
+
+            if (siblingSymbol is null)
             {
                 return SiblingInformationContainer.GetNoSibling(target);
             }
@@ -120,6 +122,7 @@ namespace SyncToAsync.Extension
                     siblingDocument.Id.Id,
                     siblingFilePath,
                     siblingIsInSourceGeneratedDocument,
+                    siblingSearchResult.IsStrictCompliance,
                     siblingSymbol.Name,
                     siblingMethodBody,
                     siblingSymbol.DeclaringSyntaxReferences[0].Span.Start,

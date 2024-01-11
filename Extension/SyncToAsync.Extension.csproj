@@ -55,6 +55,7 @@
     <Compile Include="CodeLens\Searcher\AnyTypeSymbolCollection.cs" />
     <Compile Include="CodeLens\Searcher\Async\AsyncSiblingSearcher.cs" />
     <Compile Include="CodeLens\Searcher\MethodParametersCollection.cs" />
+    <Compile Include="CodeLens\Searcher\SiblingMethodResult.cs" />
     <Compile Include="CodeLens\Searcher\Sync\SyncSiblingSearcher.cs" />
     <Compile Include="CodeLens\Searcher\SiblingSearcher.cs" />
     <Compile Include="CodeLens\Searcher\TypeComparer.cs" />
