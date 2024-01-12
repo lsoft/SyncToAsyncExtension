@@ -99,8 +99,32 @@ namespace SyncToAsync.Extension.CodeLens.Searcher.Async
             {
                 var parameterType = parameter.Type;
 
-                var atcp = new AnyTypeSymbolCollection(parameterType);
-                result.Add(atcp);
+                if (parameterType is INamedTypeSymbol namedParameterType
+                    && namedParameterType.TypeArguments.Length > 0
+                    )
+                {
+                    var typeArgument0 = namedParameterType.TypeArguments[0];
+
+                    var tie = compilation.IEnumerable(typeArgument0);
+                    if (SymbolEqualityComparer.Default.Equals(namedParameterType, tie))
+                    {
+                        //it is IEnumerable<T>
+                        //for its async sibling it will be IEnumerable<T> or IAsyncEnumerable<T>
+                        var tiae = compilation.IAsyncEnumerable(typeArgument0);
+                        var atcp = new AnyTypeSymbolCollection(tiae, tie);
+                        result.Add(atcp);
+                    }
+                    else
+                    {
+                        var atcp = new AnyTypeSymbolCollection(parameterType);
+                        result.Add(atcp);
+                    }
+                }
+                else
+                {
+                    var atcp = new AnyTypeSymbolCollection(parameterType);
+                    result.Add(atcp);
+                }
             }
 
             return result;

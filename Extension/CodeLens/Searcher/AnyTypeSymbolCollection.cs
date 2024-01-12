@@ -20,6 +20,16 @@ namespace SyncToAsync.Extension.CodeLens.Searcher
             Add(typeSymbol);
         }
 
+        public AnyTypeSymbolCollection(
+            params ITypeSymbol[] typeSymbols
+            ) : this()
+        {
+            foreach(var typeSymbol in typeSymbols)
+            {
+                Add(typeSymbol);
+            }
+        }
+
         public void Add(ITypeSymbol typeSymbol)
         {
             _typeComparers.Add(new TypeComparer(typeSymbol));

@@ -149,6 +149,11 @@ namespace SyncToAsync.Extension.CodeLens.Searcher.Sync
                         var atcp = new AnyTypeSymbolCollection(tie);
                         result.Add(atcp);
                     }
+                    else
+                    {
+                        var atcp = new AnyTypeSymbolCollection(parameterType);
+                        result.Add(atcp);
+                    }
                 }
                 else
                 {
