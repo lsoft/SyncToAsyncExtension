@@ -61,6 +61,7 @@
     <Compile Include="CodeLens\Searcher\TypeComparer.cs" />
     <Compile Include="Commands\GotoSiblingCommand.cs" />
     <Compile Include="Helper\CompilationHelper.cs" />
+    <Compile Include="Helper\ReflectionHelper.cs" />
     <Compile Include="Helper\RoslynDocumentHelper.cs" />
     <Compile Include="Helper\SymbolHelper.cs" />
     <Compile Include="Helper\VisualStudioDocumentHelper.cs" />

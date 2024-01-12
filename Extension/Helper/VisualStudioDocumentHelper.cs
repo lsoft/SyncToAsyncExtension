@@ -152,50 +152,31 @@ namespace SyncToAsync.Extension.Helper
 
                 var extensions = _componentModel.GetExtensions<Microsoft.CodeAnalysis.Host.IWorkspaceService>().ToList();
 
-                var visualStudioDocumentNavigationService = extensions.FirstOrDefault(s => s.GetType().Name == "VisualStudioDocumentNavigationService");
-                if (visualStudioDocumentNavigationService is null)
+                var navigationService = extensions.FirstOrDefault(s => s.GetType().Name == "VisualStudioDocumentNavigationService");
+                if (navigationService is null)
                 {
                     return false;
                 }
 
-                var visualStudioDocumentNavigationServiceType = visualStudioDocumentNavigationService.GetType();
-                var getLocationForSpanAsyncMethod = visualStudioDocumentNavigationServiceType.GetMethod("GetLocationForSpanAsync");
+                var getLocationForSpanAsyncMethod = navigationService.GetMethodFromInstance("GetLocationForSpanAsync");
                 if (getLocationForSpanAsyncMethod is null)
                 {
                     return false;
                 }
 
-                var getLocationForSpanAsyncTask = getLocationForSpanAsyncMethod.Invoke(
-                    visualStudioDocumentNavigationService,
+                var navigableLocation = await navigationService.InvokeTaskMethodAsync<object>(
+                    getLocationForSpanAsyncMethod,
                     new object[]
                     {
                         workspace,
                         sgDocument.Id,
                         new Microsoft.CodeAnalysis.Text.TextSpan(
                             position,
-                            0 //length
+                            length
                             ),
                         true, //allowInvalidSpan
                         CancellationToken.None
-                    }) as Task;
-                if (getLocationForSpanAsyncTask is null)
-                {
-                    return false;
-                }
-
-                await getLocationForSpanAsyncTask;
-
-                var navigableLocationResultProperty = getLocationForSpanAsyncTask.GetType().GetProperty("Result");
-                if (navigableLocationResultProperty is null)
-                {
-                    return false;
-                }
-
-                var navigableLocation = navigableLocationResultProperty.GetValue(getLocationForSpanAsyncTask);
-                if (navigableLocation is null)
-                {
-                    return false;
-                }
+                    });
 
                 var navigableLocationType = navigableLocation.GetType();
 
@@ -225,28 +206,13 @@ namespace SyncToAsync.Extension.Helper
                     return false;
                 }
 
-                var navigateToAsyncMethodTask = navigateToAsyncMethod.Invoke(
-                    navigableLocation,
+                var navigateToAsyncMethodSuccess = await navigableLocation.InvokeTaskMethodAsync<bool>(
+                    navigateToAsyncMethod,
                     new object[]
                     {
                         navigateOptions,
                         CancellationToken.None
-                    }) as Task;
-                if (navigateToAsyncMethodTask is null)
-                {
-                    return false;
-                }
-
-                await navigateToAsyncMethodTask;
-
-                var navigateToAsyncMethodTaskType = navigateToAsyncMethodTask.GetType();
-                var navigateToAsyncMethodResultProperty = navigateToAsyncMethodTaskType.GetProperty("Result");
-                if (navigateToAsyncMethodResultProperty is null)
-                {
-                    return false;
-                }
-
-                var navigateToAsyncMethodSuccess = (bool)navigateToAsyncMethodResultProperty.GetValue(navigateToAsyncMethodTask);
+                    });
                 return navigateToAsyncMethodSuccess;
             }
             catch(Exception ex)

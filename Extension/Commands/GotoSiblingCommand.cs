@@ -38,7 +38,7 @@ namespace SyncToAsync.Extension
                 await opener.OpenNavigateViewRoslynInternalsAsync(
                     documentId,
                     sic.Sibling.MethodSpanStart.Value,
-                    sic.Sibling.MethodSpanLength.Value
+                    0
                     );
             }
             else
