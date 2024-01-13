@@ -125,8 +125,8 @@ namespace SyncToAsync.Extension
                     siblingSearchResult.IsStrictCompliance,
                     siblingSymbol.Name,
                     siblingMethodBody,
-                    siblingSymbol.DeclaringSyntaxReferences[0].Span.Start,
-                    siblingSymbol.DeclaringSyntaxReferences[0].Span.Length
+                    siblingSyntaxReference.Span.Start,
+                    siblingSyntaxReference.Span.Length
                     )
                 );
         }
