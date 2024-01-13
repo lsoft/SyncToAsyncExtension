@@ -30,9 +30,12 @@ namespace SyncToAsync.Extension.CodeLens.Searcher
             IsStrictCompliance = false;
         }
 
-        public SiblingMethodResult(IMethodSymbol siblingMethod, bool isStrictCompliance)
+        public SiblingMethodResult(
+            IMethodSymbol siblingMethod,
+            bool isStrictCompliance
+            )
         {
-            SiblingMethod = siblingMethod;
+            SiblingMethod = siblingMethod.PartialImplementationPart ?? siblingMethod;
             IsStrictCompliance = isStrictCompliance;
         }
     }

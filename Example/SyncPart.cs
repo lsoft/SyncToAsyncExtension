@@ -92,8 +92,6 @@ namespace SyncAsyncExample
 
 
 
-
-
         public T Method7<T>(string a)
         {
             throw new NotImplementedException();
@@ -131,7 +129,7 @@ namespace SyncAsyncExample
 
 
         [Zomp.SyncMethodGenerator.CreateSyncVersion]
-        public static async IAsyncEnumerable<double> Method10Async(
+        public async IAsyncEnumerable<double> Method10Async(
             IAsyncEnumerable<double> source,
             int windowSize,
             IProgress<int>? progress = null,
@@ -156,5 +154,19 @@ namespace SyncAsyncExample
             throw new NotImplementedException();
         }
 
+
+
+
+        public async Task Method12Async()
+        {
+            throw new NotImplementedException();
+        }
+
+        public partial void Method12();
+
+        public partial void Method12()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
