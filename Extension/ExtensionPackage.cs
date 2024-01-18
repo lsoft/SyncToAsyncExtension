@@ -3,6 +3,7 @@ global using Microsoft.VisualStudio.Shell;
 global using System;
 global using Task = System.Threading.Tasks.Task;
 using EnvDTE;
+using Extension;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -24,6 +25,7 @@ namespace SyncToAsync.Extension
     [InstalledProductRegistration(Vsix.Name, Vsix.Description, Vsix.Version)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExistsAndFullyLoaded_string, PackageAutoLoadFlags.BackgroundLoad)]
+    [ProvideOptionPage(typeof(global::Extension.OptionsProvider.GeneralOptions), "Sync <-> Async", "General", 0, 0, true, SupportsProfiles = true)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [Guid(PackageGuids.ExtensionString)]
     public sealed class ExtensionPackage : ToolkitPackage
@@ -148,7 +150,7 @@ namespace SyncToAsync.Extension
                         var restart = false;
                         do
                         {
-                            restart = _restartSignal.WaitOne(TimeSpan.FromSeconds(5));
+                            restart = _restartSignal.WaitOne(TimeSpan.FromSeconds(General.Instance.TimeoutToRecalculate));
                         }
                         while (restart);
 

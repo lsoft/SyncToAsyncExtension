@@ -5,8 +5,6 @@ namespace Extension
 {
     internal partial class OptionsProvider
     {
-        // Register the options with this attribute on your package class:
-        // [ProvideOptionPage(typeof(OptionsProvider.GeneralOptions), "Extension", "General", 0, 0, true, SupportsProfiles = true)]
         [ComVisible(true)]
         public class GeneralOptions : BaseOptionPage<General>
         {
@@ -20,5 +18,11 @@ namespace Extension
         [Description("Specifies whether to activate the CodeLens for sync<->async moving or not.")]
         [DefaultValue(true)]
         public bool Enabled { get; set; } = true;
+
+        [Category("General")]
+        [DisplayName("Recalculate timeout")]
+        [Description("Specifies how many seconds after last typing this extension waits to recalculate codelenses.")]
+        [DefaultValue(true)]
+        public int TimeoutToRecalculate { get; set; } = 3;
     }
 }

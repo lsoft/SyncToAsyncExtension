@@ -9,7 +9,7 @@ namespace SyncToAsync.Extension
 {
     public static class SyntaxHelper
     {
-        public static SyntaxNode? Up<T>(this SyntaxNode node)
+        public static T? Up<T>(this SyntaxNode node)
             where T : SyntaxNode
         {
             SyntaxNode? cnode = node;
