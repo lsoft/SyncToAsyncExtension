@@ -15,6 +15,7 @@ using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using SyncToAsync.Extension.Helper;
 using SyncToAsync.Extension.CodeLens.Searcher;
+using Microsoft.VisualStudio.Threading;
 
 namespace SyncToAsync.Extension
 {
@@ -63,6 +64,9 @@ namespace SyncToAsync.Extension
             {
                 return SiblingInformationContainer.GetNoSibling(target);
             }
+
+            //switch to background thread
+            await TaskScheduler.Default;
 
             var workspace = (Workspace)_componentModel.GetService<VisualStudioWorkspace>();
             if (workspace == null)
